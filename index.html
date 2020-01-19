@@ -67,37 +67,43 @@
         }
       }
 
-      function startAudio(instance, type) {
-        const bufferSize = processor.bufferSize;
+      async function startAudio(instance, type) {
+        try {
+          await audiocontext.resume();
 
-        processor.connect(audiocontext.destination);
+          const bufferSize = processor.bufferSize;
 
-        processor.onaudioprocess = (event) => {
-          const inputLs  = event.inputBuffer.getChannelData(0);
-          const inputRs  = event.inputBuffer.getChannelData(1);
-          const outputLs = event.outputBuffer.getChannelData(0);
-          const outputRs = event.outputBuffer.getChannelData(1);
+          processor.connect(audiocontext.destination);
 
-          for (let i = 0; i < bufferSize; i++) {
-            let output = 0;
+          processor.onaudioprocess = (event) => {
+            const inputLs  = event.inputBuffer.getChannelData(0);
+            const inputRs  = event.inputBuffer.getChannelData(1);
+            const outputLs = event.outputBuffer.getChannelData(0);
+            const outputRs = event.outputBuffer.getChannelData(1);
 
-            switch (type) {
-              case 'whitenoise':
-                output = instance.exports.whitenoise();
-                break;
-              case 'pinknoise':
-                output = instance.exports.pinknoise();
-                break;
-              case 'browniannoise':
-                output = instance.exports.browniannoise();
-                break;
-              default:
-                break;
+            for (let i = 0; i < bufferSize; i++) {
+              let output = 0;
+
+              switch (type) {
+                case 'whitenoise':
+                  output = instance.exports.whitenoise();
+                  break;
+                case 'pinknoise':
+                  output = instance.exports.pinknoise();
+                  break;
+                case 'browniannoise':
+                  output = instance.exports.browniannoise();
+                  break;
+                default:
+                  break;
+              }
+
+              outputLs[i] = output;
+              outputRs[i] = output;
             }
-
-            outputLs[i] = output;
-            outputRs[i] = output;
           }
+        } catch (e) {
+          console.error(e);
         }
       }
     </script>
