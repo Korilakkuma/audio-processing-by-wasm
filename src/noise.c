@@ -14,7 +14,8 @@ double b6 = 0.0;
 
 double last_out = 0.0;
 
-double EMSCRIPTEN_KEEPALIVE whitenoise(void) {
+EMSCRIPTEN_KEEPALIVE
+double whitenoise(void) {
   if (is_init == 0) {
     srand((unsigned)time(NULL));
     is_init = 1;
@@ -25,7 +26,8 @@ double EMSCRIPTEN_KEEPALIVE whitenoise(void) {
   return o;
 }
 
-double EMSCRIPTEN_KEEPALIVE pinknoise(void) {
+EMSCRIPTEN_KEEPALIVE
+double pinknoise(void) {
   if (is_init == 0) {
     srand((unsigned)time(NULL));
     is_init = 1;
@@ -47,7 +49,8 @@ double EMSCRIPTEN_KEEPALIVE pinknoise(void) {
   return o;
 }
 
-double EMSCRIPTEN_KEEPALIVE browniannoise(void) {
+EMSCRIPTEN_KEEPALIVE
+double browniannoise(void) {
   if (is_init == 0) {
     srand((unsigned)time(NULL));
     is_init = 1;
