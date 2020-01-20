@@ -2,6 +2,39 @@
 #include <math.h>
 #include <emscripten/emscripten.h>
 
+int pow2(int n);
+void FFT(float *x_real, float *x_imag, int N);
+void IFFT(float *x_real, float *x_imag, int N);
+
+EMSCRIPTEN_KEEPALIVE
+void pitchshifter(
+  double pitch,
+  float *reals,
+  float *imags,
+  float *a_reals,
+  float *a_imags,
+  int N
+) {
+  FFT(reals, imags, N);
+
+  for (int k = 0; k < N; k++) {
+    int offset = floor(pitch * k);
+
+    int eq = 1;
+
+    if (k > (N / 2)) {
+      eq = 0;
+    }
+
+    if ((offset >= 0) && (offset < N)) {
+      a_reals[offset] += eq * reals[k];
+      a_imags[offset] += eq * imags[k];
+    }
+  }
+
+  IFFT(a_reals, a_imags, N);
+}
+
 int pow2(int n) {
   if (n == 0) {
     return 1;
@@ -137,33 +170,4 @@ void IFFT(float *x_real, float *x_imag, int N) {
   }
 
   free(index);
-}
-
-EMSCRIPTEN_KEEPALIVE
-void pitchshifter(
-  double pitch,
-  float *reals,
-  float *imags,
-  float *a_reals,
-  float *a_imags,
-  int N
-) {
-  FFT(reals, imags, N);
-
-  for (int i = 0; i < N; i++) {
-    int offset = floor(pitch * i);
-
-    int eq = 1;
-
-    if (i > (N / 2)) {
-      eq = 0;
-    }
-
-    if ((offset >= 0) && (offset < N)) {
-      a_reals[offset] += eq * reals[i];
-      a_imags[offset] += eq * imags[i];
-    }
-  }
-
-  IFFT(a_reals, a_imags, N);
 }

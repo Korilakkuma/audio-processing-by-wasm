@@ -2,28 +2,26 @@
 <html lang="en" prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
   <head>
     <meta charset="UTF-8" />
-    <title>Audio Samples by WebAssembly</title>
-    <meta property="og:title" content="Audio Samples by WebAssembly" />
+    <title>Audio Processing by WebAssembly</title>
+    <meta property="og:title" content="Audio Processing by WebAssembly" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://korilakkuma.github.io/audio-samples-by-wasm/" />
+    <meta property="og:url" content="https://korilakkuma.github.io/audio-processing-by-wasm/" />
     <meta property="og:image" content="https://korilakkuma.github.io/xsound-api/assets/images/icon.png" />
-    <meta property="og:description" content="Audio Samples by WebAssembly" />
+    <meta property="og:description" content="Audio Processing by WebAssembly" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@xmusicjp" />
+    <link rel="stylesheet" href="./app.css" />
   </head>
   <body>
-    <div>
-      <select id="select-noise">
-        <option value="" selected>SELECT NOISE</option>
-        <option value="whitenoise">White Noise</option>
-        <option value="pinknoise">Pink Noise</option>
-        <option value="browniannoise">Brownian Noise</option>
-      </select>
-      <input type="file" id="file-uploader" />
-      <input type="range" id="range-pitch" value="1" min="0.5" max="4" step="0.05" />
-      <span id="output-pitch">1</span>
-    </div>
-    <script src="./wasm/pitchshifter.js"></script>
-    <script src="./app.js"></script>
+    <section>
+      <h1>Audio Processing by WebAssembly</h1>
+      <nav>
+        <ul>
+          <li><a href="./noise">Noise</a></li>
+          <li><a href="./pitchshifter">Pitch Shifter</a></li>
+          <li><a href="./timestretch">Time Stretch</a></li>
+        </ul>
+      </nav>
+    </section>
   </body>
 </html>

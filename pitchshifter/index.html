@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pitch Shifter &amp; Whammy | Audio Processing by WebAssembly</title>
+    <meta property="og:title" content="Pitch Shifter &amp; Whammy | Audio Processing by WebAssembly" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://korilakkuma.github.io/audio-processing-by-wasm/" />
+    <meta property="og:image" content="https://korilakkuma.github.io/xsound-api/assets/images/icon.png" />
+    <meta property="og:description" content="Pitch Shifter &amp; Whammy | Audio Processing by WebAssembly" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@xmusicjp" />
+    <link rel="stylesheet" href="../app.css" />
+  </head>
+  <body>
+    <section>
+      <nav><a href="../">TOP</a> &gt; &gt; Pitch Shifter</nav>
+      <dt>
+        <dt><label for="file-uploader">Upload Audio File</label></dt>
+        <dd><input type="file" id="file-uploader" /></dd>
+        <dt><label for="checkbox-whammy">Whammy</label></dt>
+        <dd><input type="checkbox" id="checkbox-whammy" /></dd>
+        <dt><label for="range-pitch">Pitch: <span id="output-pitch">1</span></label></dt>
+        <dd><input type="range" id="range-pitch" value="1" min="0.5" max="4" step="0.05" /></dd>
+      </dt>
+    </section>
+    <script src="../setupWASM.js"></script>
+    <script src="./pitchshifter.js"></script>
+    <script>
+    const audiocontext = new AudioContext();
+    const processor    = audiocontext.createScriptProcessor(8192, 2, 2);
+
+    let audio = null;
+    let pitch = 1;
+    let whammyTimer = null;
+
+    document.getElementById('file-uploader').addEventListener('change', async (event) => {
+      processor.onaudioprocess = null;
+      processor.disconnect(0);
+
+      if (audio) {
+        audio.pause();
+      }
+
+      const { module, instance, bytes } = await setupWASM('pitchshifter');
+
+      startAudio(module, instance, bytes, event.target.files[0]);
+    }, false);
+
+    document.getElementById('range-pitch').addEventListener('input', (event) => {
+      const range = event.currentTarget;
+
+      pitch = range.valueAsNumber;
+      document.getElementById('output-pitch').textContent = range.value;
+    }, false);
+
+    document.getElementById('checkbox-whammy').addEventListener('click', (event) => {
+      const checkbox = event.currentTarget;
+
+      if (checkbox.checked) {
+        const diff = 3 - pitch;
+        const rate = diff / 50;
+
+        whammyTimer = window.setInterval(() => {
+          pitch += rate;
+
+          document.getElementById('range-pitch').valueAsNumber = pitch;
+          document.getElementById('output-pitch').textContent = Math.floor(pitch * 100) / 100;
+
+          if (pitch >= 3) {
+            window.clearInterval(whammyTimer);
+            whammyTimer = null;
+          }
+        }, 10);
+      } else {
+        window.clearInterval(whammyTimer);
+        whammyTimer = null;
+      }
+    }, false);
+
+    async function startAudio(module, instance, bytes, file) {
+      try {
+        await audiocontext.resume();
+
+        const m = Module({
+          wasmBinary: new Uint8Array(bytes),
+          onRuntimeInitialized: () => {
+            console.log('onRuntimeInitialized');
+
+            const objectURL = window.URL.createObjectURL(file);
+
+            audio = new Audio(objectURL);
+
+            const source = audiocontext.createMediaElementSource(audio);
+
+            source.connect(processor);
+            processor.connect(audiocontext.destination);
+
+            const bufferSize = processor.bufferSize;
+
+            const pitchshifter = m.cwrap('pitchshifter', null, ['number', 'Float32Array', 'Float32Array', 'Float32Array', 'Float32Array', 'number']);
+
+            processor.onaudioprocess = (event) => {
+              const inputLs  = event.inputBuffer.getChannelData(0);
+              const inputRs  = event.inputBuffer.getChannelData(1);
+              const outputLs = event.outputBuffer.getChannelData(0);
+              const outputRs = event.outputBuffer.getChannelData(1);
+
+              const pointerRealL  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const pointerRealR  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const pointerImagL  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const pointerImagR  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const apointerRealL = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const apointerRealR = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const apointerImagL = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const apointerImagR = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+
+              const realLs = new Float32Array(inputLs);
+              const realRs = new Float32Array(inputRs);
+              const imagLs = new Float32Array(bufferSize);
+              const imagRs = new Float32Array(bufferSize);
+
+              const arealLs = new Float32Array(m.HEAPF32.buffer, apointerRealL, bufferSize);
+              const arealRs = new Float32Array(m.HEAPF32.buffer, apointerRealR, bufferSize);
+              const aimagLs = new Float32Array(m.HEAPF32.buffer, apointerImagL, bufferSize);
+              const aimagRs = new Float32Array(m.HEAPF32.buffer, apointerImagR, bufferSize);
+
+              m.HEAPF32.set(realLs, pointerRealL / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(realRs, pointerRealR / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(imagLs, pointerImagL / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(imagRs, pointerImagR / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(arealLs, apointerRealL / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(arealRs, apointerRealR / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(aimagLs, apointerImagL / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(aimagRs, apointerImagR / Float32Array.BYTES_PER_ELEMENT);
+
+              pitchshifter(pitch, pointerRealL, pointerImagL, apointerRealL, apointerImagL, bufferSize);
+              pitchshifter(pitch, pointerRealR, pointerImagR, apointerRealR, apointerImagR, bufferSize);
+
+              outputLs.set(arealLs);
+              outputRs.set(arealRs);
+
+              m._free(pointerRealL);
+              m._free(pointerImagL);
+              m._free(pointerRealR);
+              m._free(pointerImagR);
+              m._free(apointerRealL);
+              m._free(apointerImagL);
+              m._free(apointerRealR);
+              m._free(apointerImagR);
+            };
+
+            audio.play();
+          }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    </script>
+  </body>
+</html>

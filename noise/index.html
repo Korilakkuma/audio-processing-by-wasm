@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Noise | Audio Processing by WebAssembly</title>
+    <meta property="og:title" content="Noise | Audio Processing by WebAssembly" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://korilakkuma.github.io/audio-processing-by-wasm/" />
+    <meta property="og:image" content="https://korilakkuma.github.io/xsound-api/assets/images/icon.png" />
+    <meta property="og:description" content="Noise | Audio Processing by WebAssembly" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@xmusicjp" />
+    <link rel="stylesheet" href="../app.css" />
+  </head>
+  <body>
+    <section>
+      <nav><a href="../">TOP</a> &gt;&gt; Noise</nav>
+      <div>
+        <select id="select-noise">
+          <option value="" selected>SELECT NOISE</option>
+          <option value="whitenoise">White Noise</option>
+          <option value="pinknoise">Pink Noise</option>
+          <option value="browniannoise">Brownian Noise</option>
+        </select>
+      </div>
+    </section>
+    <script src="../setupWASM.js"></script>
+    <script src="noise.js"></script>
+    <script>
+    const audiocontext = new AudioContext();
+    const processor    = audiocontext.createScriptProcessor(256, 0, 2);
+
+    document.getElementById('select-noise').addEventListener('change', async (event) => {
+      processor.onaudioprocess = null;
+      processor.disconnect(0);
+
+      const { instance } = await setupWASM('noise');
+
+      startNoise(instance, event.target.value);
+    }, false);
+
+    async function startNoise(instance, type) {
+      try {
+        await audiocontext.resume();
+
+        processor.connect(audiocontext.destination);
+
+        const bufferSize = processor.bufferSize;
+
+        processor.onaudioprocess = (event) => {
+          const outputLs = event.outputBuffer.getChannelData(0);
+          const outputRs = event.outputBuffer.getChannelData(1);
+
+          for (let i = 0; i < bufferSize; i++) {
+            let output = 0;
+
+            switch (type) {
+              case 'whitenoise':
+                output = instance.exports.whitenoise();
+                break;
+              case 'pinknoise':
+                output = instance.exports.pinknoise();
+                break;
+              case 'browniannoise':
+                output = instance.exports.browniannoise();
+                break;
+              default:
+                break;
+            }
+
+            outputLs[i] = output;
+            outputRs[i] = output;
+          }
+        };
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    </script>
+  </body>
+</html>
