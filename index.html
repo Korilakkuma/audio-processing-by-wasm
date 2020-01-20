@@ -13,13 +13,17 @@
   </head>
   <body>
     <div>
-      <select id="select-audio">
-        <option value="" selected>SELECT AUDIO</option>
-        <option value="noise whitenoise">White Noise</option>
-        <option value="noise pinknoise">Pink Noise</option>
-        <option value="noise browniannoise">Brownian Noise</option>
+      <select id="select-noise">
+        <option value="" selected>SELECT NOISE</option>
+        <option value="whitenoise">White Noise</option>
+        <option value="pinknoise">Pink Noise</option>
+        <option value="browniannoise">Brownian Noise</option>
       </select>
+      <input type="file" id="file-uploader" />
+      <input type="range" id="range-pitch" value="1" min="0.5" max="4" step="0.05" />
+      <span id="output-pitch">1</span>
     </div>
+    <script src="./wasm/pitchshifter.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
