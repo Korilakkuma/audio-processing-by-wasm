@@ -35,6 +35,13 @@ $ cd noise
 $ emcc noise.c -s WASM=1 -o noise.js
 ```
 
+## Vocal Canceler
+
+```bash
+$ cd vocalcanceler
+$ emcc vocalcanceler.c -s WASM=1 -o vocalcanceler.js
+```
+
 ## Pitch Shifter
 
 ```bash
