@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vocal Canceler | Audio Processing by WebAssembly</title>
+    <meta property="og:title" content="Pitch Shifter &amp; Whammy | Audio Processing by WebAssembly" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://korilakkuma.github.io/audio-processing-by-wasm/" />
+    <meta property="og:image" content="https://korilakkuma.github.io/xsound-api/assets/images/icon.png" />
+    <meta property="og:description" content="Pitch Shifter &amp; Whammy | Audio Processing by WebAssembly" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@xmusicjp" />
+    <link rel="stylesheet" href="../app.css" />
+  </head>
+  <body>
+    <section>
+      <nav><a href="../">TOP</a> &gt; &gt; Vocal Canceler</nav>
+      <dt>
+        <dt><label for="file-uploader">Upload Audio File</label></dt>
+        <dd><input type="file" id="file-uploader" /></dd>
+        <dt><label for="range-depth">Depth: <span id="output-depth">0</span></label></dt>
+        <dd><input type="range" id="range-depth" value="0" min="0" max="1" step="0.05" /></dd>
+      </dt>
+    </section>
+    <script src="../setupWASM.js"></script>
+    <script src="./vocalcanceler.js"></script>
+    <script>
+    const audiocontext = new AudioContext();
+    const processor    = audiocontext.createScriptProcessor(8192, 2, 2);
+
+    let audio = null;
+    let depth = 0;
+
+    document.getElementById('file-uploader').addEventListener('change', async (event) => {
+      processor.onaudioprocess = null;
+      processor.disconnect(0);
+
+      if (audio) {
+        audio.pause();
+      }
+
+      const { instance } = await setupWASM('vocalcanceler');
+
+      startAudio(instance, event.target.files[0]);
+    }, false);
+
+    document.getElementById('range-depth').addEventListener('input', (event) => {
+      const range = event.currentTarget;
+
+      depth = range.valueAsNumber;
+      document.getElementById('output-depth').textContent = range.value;
+    }, false);
+
+    async function startAudio(instance, file) {
+      try {
+        await audiocontext.resume();
+
+        const objectURL = window.URL.createObjectURL(file);
+
+        audio = new Audio(objectURL);
+
+        const source = audiocontext.createMediaElementSource(audio);
+
+        source.connect(processor);
+        processor.connect(audiocontext.destination);
+
+        const bufferSize = processor.bufferSize;
+
+        processor.onaudioprocess = (event) => {
+          const inputLs  = event.inputBuffer.getChannelData(0);
+          const inputRs  = event.inputBuffer.getChannelData(1);
+          const outputLs = event.outputBuffer.getChannelData(0);
+          const outputRs = event.outputBuffer.getChannelData(1);
+
+          for (let i = 0; i < bufferSize; i++) {
+            outputLs[i] = instance.exports.vocalcanceler(inputLs[i], inputRs[i], depth);
+            outputRs[i] = instance.exports.vocalcanceler(inputRs[i], inputLs[i], depth);
+          }
+        };
+
+        audio.play();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    </script>
+  </body>
+</html>
