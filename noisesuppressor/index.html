@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Noise Suppressor | Audio Processing by WebAssembly</title>
+    <meta property="og:title" content="Noise Suppressor | Audio Processing by WebAssembly" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://korilakkuma.github.io/audio-processing-by-wasm/" />
+    <meta property="og:image" content="https://korilakkuma.github.io/xsound-api/assets/images/icon.png" />
+    <meta property="og:description" content="Noise Suppressor | Audio Processing by WebAssembly" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@xmusicjp" />
+    <link rel="stylesheet" href="../app.css" />
+  </head>
+  <body>
+    <section>
+      <nav><a href="../">TOP</a> &gt; &gt; Noise Suppressor</nav>
+      <dt>
+        <dt><label for="range-threshold">Threshold: <span id="output-threshold">0</span></label></dt>
+        <dd><input type="range" id="range-threshold" value="0" min="0" max="1" step="0.05" /></dd>
+      </dt>
+    </section>
+    <script src="../setupWASM.js"></script>
+    <script src="./noisesuppressor.js"></script>
+    <script>
+    const audiocontext = new AudioContext();
+    const processor    = audiocontext.createScriptProcessor(8192, 2, 2);
+
+    let threshold = 0;
+
+    navigator.mediaDevices.getUserMedia({ audio : true })
+      .then(async (stream) => {
+        const { module, instance, bytes } = await setupWASM('noisesuppressor');
+
+        startStream(module, instance, bytes, stream);
+      })
+      .catch(console.error);
+
+    document.getElementById('range-threshold').addEventListener('input', (event) => {
+      const range = event.currentTarget;
+
+      threshold = range.valueAsNumber;
+      document.getElementById('output-threshold').textContent = range.value;
+    }, false);
+
+    async function startStream(module, instance, bytes, stream) {
+      try {
+        await audiocontext.resume();
+
+        const m = Module({
+          wasmBinary: new Uint8Array(bytes),
+          onRuntimeInitialized: () => {
+            console.log('onRuntimeInitialized');
+
+            const source = audiocontext.createMediaStreamSource(stream);
+
+            source.connect(processor);
+            processor.connect(audiocontext.destination);
+
+            const bufferSize = processor.bufferSize;
+
+            const noisesuppressor = m.cwrap('noisesuppressor', null, ['number', 'Float32Array', 'Float32Array', 'number']);
+
+            processor.onaudioprocess = (event) => {
+              const inputLs  = event.inputBuffer.getChannelData(0);
+              const inputRs  = event.inputBuffer.getChannelData(1);
+              const outputLs = event.outputBuffer.getChannelData(0);
+              const outputRs = event.outputBuffer.getChannelData(1);
+
+              const pointerInputL  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const pointerInputR  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const pointerOutputL = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+              const pointerOutputR = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
+
+              const tmpLs = new Float32Array(m.HEAPF32.buffer, pointerOutputL, bufferSize);
+              const tmpRs = new Float32Array(m.HEAPF32.buffer, pointerOutputR, bufferSize);
+
+              m.HEAPF32.set(inputLs, pointerInputL / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(inputRs, pointerInputR / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(tmpLs, pointerOutputL / Float32Array.BYTES_PER_ELEMENT);
+              m.HEAPF32.set(tmpRs, pointerOutputR / Float32Array.BYTES_PER_ELEMENT);
+
+              noisesuppressor(threshold, pointerInputL, pointerOutputL, bufferSize);
+              noisesuppressor(threshold, pointerInputR, pointerOutputR, bufferSize);
+
+              outputLs.set(tmpLs);
+              outputRs.set(tmpRs);
+
+              m._free(pointerInputL);
+              m._free(pointerInputR);
+              m._free(pointerOutputL);
+              m._free(pointerOutputR);
+            };
+          }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    </script>
+  </body>
+</html>
