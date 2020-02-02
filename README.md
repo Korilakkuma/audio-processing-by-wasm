@@ -48,3 +48,10 @@ $ emcc vocalcanceler.c -s WASM=1 -o vocalcanceler.js
 $ cd pitchshifter
 $ emcc pitchshifter.c -s WASM=1 -s MODULARIZE=1 -s "EXPORTED_FUNCTIONS=['_pitchshifter']" -s "EXTRA_EXPORTED_RUNTIME_METHODS=['ccall', 'cwrap']" -o pitchshifter.js
 ```
+
+## Noise Suppressor
+
+```bash
+$ cd noisesuppressor
+$ emcc noisesuppressor.c -s WASM=1 -s MODULARIZE=1 -s "EXPORTED_FUNCTIONS=['_noisesuppressor']" -s "EXTRA_EXPORTED_RUNTIME_METHODS=['ccall', 'cwrap']" -o noisesuppressor.js
+```
