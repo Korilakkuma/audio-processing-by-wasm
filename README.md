@@ -3,15 +3,22 @@ Audio Processing by WebAssembly
 
 # Emscripten SDK
 
-## Mac OS X
+[Repository](https://github.com/emscripten-core/emsdk)
 
-- `Xcode`
-  - git and clang
+## System Requirements
+
+- `git`
+- C compiler (clang ... etc)
 - `CMake`
+
+### Mac OS X
+
 - `Python`
   - Version 2.7.0 or above.
 - `Java`
   - For running closure compiler (optional)
+
+and,
 
 ```bash
 $ git clone git@github.com:emscripten-core/emsdk.git
