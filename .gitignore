@@ -2,5 +2,6 @@
 *.wasm
 *.js
 !/app.js
+!onRuntimeInitializedHandler.js
 app.css
 index.html
