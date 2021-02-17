@@ -26,6 +26,7 @@
     </section>
     <script src="../app.js"></script>
     <script src="./pitchshifter.js"></script>
+    <script src="./onRuntimeInitializedHandler.js"></script>
     <script>
     const audiocontext = new AudioContext();
     const processor    = audiocontext.createScriptProcessor(8192, 2, 2);
@@ -85,72 +86,7 @@
         const m = Module({
           wasmBinary: new Uint8Array(bytes),
           onRuntimeInitialized: () => {
-            console.log('onRuntimeInitialized');
-
-            const objectURL = window.URL.createObjectURL(file);
-
-            audio = new Audio(objectURL);
-
-            const source = audiocontext.createMediaElementSource(audio);
-
-            source.connect(processor);
-            processor.connect(audiocontext.destination);
-
-            const bufferSize = processor.bufferSize;
-
-            const pitchshifter = m.cwrap('pitchshifter', null, ['number', 'Float32Array', 'Float32Array', 'Float32Array', 'Float32Array', 'number']);
-
-            processor.onaudioprocess = (event) => {
-              const inputLs  = event.inputBuffer.getChannelData(0);
-              const inputRs  = event.inputBuffer.getChannelData(1);
-              const outputLs = event.outputBuffer.getChannelData(0);
-              const outputRs = event.outputBuffer.getChannelData(1);
-
-              const pointerRealL  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-              const pointerRealR  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-              const pointerImagL  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-              const pointerImagR  = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-              const apointerRealL = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-              const apointerRealR = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-              const apointerImagL = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-              const apointerImagR = m._malloc(bufferSize * Float32Array.BYTES_PER_ELEMENT);
-
-              const realLs = new Float32Array(inputLs);
-              const realRs = new Float32Array(inputRs);
-              const imagLs = new Float32Array(bufferSize);
-              const imagRs = new Float32Array(bufferSize);
-
-              const arealLs = new Float32Array(m.HEAPF32.buffer, apointerRealL, bufferSize);
-              const arealRs = new Float32Array(m.HEAPF32.buffer, apointerRealR, bufferSize);
-              const aimagLs = new Float32Array(m.HEAPF32.buffer, apointerImagL, bufferSize);
-              const aimagRs = new Float32Array(m.HEAPF32.buffer, apointerImagR, bufferSize);
-
-              m.HEAPF32.set(realLs, pointerRealL / Float32Array.BYTES_PER_ELEMENT);
-              m.HEAPF32.set(realRs, pointerRealR / Float32Array.BYTES_PER_ELEMENT);
-              m.HEAPF32.set(imagLs, pointerImagL / Float32Array.BYTES_PER_ELEMENT);
-              m.HEAPF32.set(imagRs, pointerImagR / Float32Array.BYTES_PER_ELEMENT);
-              m.HEAPF32.set(arealLs, apointerRealL / Float32Array.BYTES_PER_ELEMENT);
-              m.HEAPF32.set(arealRs, apointerRealR / Float32Array.BYTES_PER_ELEMENT);
-              m.HEAPF32.set(aimagLs, apointerImagL / Float32Array.BYTES_PER_ELEMENT);
-              m.HEAPF32.set(aimagRs, apointerImagR / Float32Array.BYTES_PER_ELEMENT);
-
-              pitchshifter(pitch, pointerRealL, pointerImagL, apointerRealL, apointerImagL, bufferSize);
-              pitchshifter(pitch, pointerRealR, pointerImagR, apointerRealR, apointerImagR, bufferSize);
-
-              outputLs.set(arealLs);
-              outputRs.set(arealRs);
-
-              m._free(pointerRealL);
-              m._free(pointerImagL);
-              m._free(pointerRealR);
-              m._free(pointerImagR);
-              m._free(apointerRealL);
-              m._free(apointerImagL);
-              m._free(apointerRealR);
-              m._free(apointerImagR);
-            };
-
-            audio.play();
+            onRuntimeInitializedHandler(m, audio, processor, file);
           }
         });
       } catch (e) {
