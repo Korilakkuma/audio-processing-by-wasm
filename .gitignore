@@ -2,3 +2,5 @@
 *.wasm
 *.js
 !/app.js
+app.css
+index.html
